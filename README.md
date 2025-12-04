@@ -5,28 +5,34 @@ Plugin for polling Modbus devices and publishing the data to thin-edge.io. If us
 
 ## Table of contents
 
-- [Overview](#overview)
-- [Requirements](#requirements)
-- [Demo](#demo)
-- [Config files](#config-files)
-  - [modbus.toml](#modbustoml)
-  - [devices.toml](#devicestoml)
-  - [Updating the config files](#updating-the-config-files)
-- [Logs and systemd service](#logs-and-systemd-service)
-- [Cumulocity Integration](#cumulocity-integration)
-
-  - [Installation via Software Management](#installation-via-software-management)
-  - [Log file access](#log-file-access)
-  - [Config management](#config-management)
-  - [Cloud Fieldbus](#cloud-fieldbus)
-  - [Writing operations](#writing-operations)
-
-- [Testing](#testing)
-- [Build](#build)
-  - [Debian package](#debian-package)
-- [Deployment](#deployment)
-  - [As Python script (for dev only)](#as-python-script-for-dev-only)
-  - [As deb file](#as-deb-file)
+- [tedge-modbus-plugin](#tedge-modbus-plugin)
+  - [Table of contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Requirements](#requirements)
+  - [Demo](#demo)
+  - [Config files](#config-files)
+    - [modbus.toml](#modbustoml)
+    - [devices.toml](#devicestoml)
+    - [Updating the config files](#updating-the-config-files)
+  - [Logs and systemd service](#logs-and-systemd-service)
+  - [Cumulocity Integration](#cumulocity-integration)
+    - [Installation via Software Management](#installation-via-software-management)
+    - [Log file access](#log-file-access)
+    - [Config management](#config-management)
+    - [Cloud Fieldbus](#cloud-fieldbus)
+    - [Write operations](#write-operations)
+      - [thin-edge.io Commands](#thin-edgeio-commands)
+      - [Payload Formats](#payload-formats)
+      - [Write to Register (c8y\_SetRegister / modbus\_SetRegister)](#write-to-register-c8y_setregister--modbus_setregister)
+      - [Write to Coil (c8y\_SetCoil / modbus\_SetCoil)](#write-to-coil-c8y_setcoil--modbus_setcoil)
+  - [Testing](#testing)
+  - [Build](#build)
+    - [Debian package](#debian-package)
+  - [Deployment](#deployment)
+    - [As Python script (for dev only)](#as-python-script-for-dev-only)
+    - [As deb file](#as-deb-file)
+  - [Contributing](#contributing)
+    - [Coding Style](#coding-style)
 
 ## Overview
 
@@ -193,7 +199,7 @@ The plugin supports two payload formats for write operations:
 1. **Explicit address format** - directly specify register/coil address and parameters
 2. **Name-based format** - use metrics array with name field to match configuration in devices.toml
 
-For the name-based format, the `name` field in devices.toml registers/coils configuration is required to match the metrics. The matching uses prefix matching: if the metric name starts with the configured name, it will match. For example, a metric name `"test_test_setPoint"` will match a register with `name = "test_test"` in devices.toml.
+For the name-based format, the `name` field in devices.toml registers/coils configuration is required to match the metrics. The matching uses prefix matching: if the metric name starts with the configured name, it will match. For example, a metric name `"foo_bar_setPoint"` will match a register with `name = "foo_bar"` in devices.toml.
 
 **Command Status Flow:**
 - Commands with `"status": "init"` are automatically converted to `"executing"` by the plugin
