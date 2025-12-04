@@ -5,28 +5,34 @@ Plugin for polling Modbus devices and publishing the data to thin-edge.io. If us
 
 ## Table of contents
 
-- [Overview](#overview)
-- [Requirements](#requirements)
-- [Demo](#demo)
-- [Config files](#config-files)
-  - [modbus.toml](#modbustoml)
-  - [devices.toml](#devicestoml)
-  - [Updating the config files](#updating-the-config-files)
-- [Logs and systemd service](#logs-and-systemd-service)
-- [Cumulocity Integration](#cumulocity-integration)
-
-  - [Installation via Software Management](#installation-via-software-management)
-  - [Log file access](#log-file-access)
-  - [Config management](#config-management)
-  - [Cloud Fieldbus](#cloud-fieldbus)
-  - [Writing operations](#writing-operations)
-
-- [Testing](#testing)
-- [Build](#build)
-  - [Debian package](#debian-package)
-- [Deployment](#deployment)
-  - [As Python script (for dev only)](#as-python-script-for-dev-only)
-  - [As deb file](#as-deb-file)
+- [tedge-modbus-plugin](#tedge-modbus-plugin)
+  - [Table of contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Requirements](#requirements)
+  - [Demo](#demo)
+  - [Config files](#config-files)
+    - [modbus.toml](#modbustoml)
+    - [devices.toml](#devicestoml)
+    - [Updating the config files](#updating-the-config-files)
+  - [Logs and systemd service](#logs-and-systemd-service)
+  - [Cumulocity Integration](#cumulocity-integration)
+    - [Installation via Software Management](#installation-via-software-management)
+    - [Log file access](#log-file-access)
+    - [Config management](#config-management)
+    - [Cloud Fieldbus](#cloud-fieldbus)
+    - [Write operations](#write-operations)
+      - [thin-edge.io Commands](#thin-edgeio-commands)
+      - [Payload Formats](#payload-formats)
+      - [Write to Register (c8y\_SetRegister / modbus\_SetRegister)](#write-to-register-c8y_setregister--modbus_setregister)
+      - [Write to Coil (c8y\_SetCoil / modbus\_SetCoil)](#write-to-coil-c8y_setcoil--modbus_setcoil)
+  - [Testing](#testing)
+  - [Build](#build)
+    - [Debian package](#debian-package)
+  - [Deployment](#deployment)
+    - [As Python script (for dev only)](#as-python-script-for-dev-only)
+    - [As deb file](#as-deb-file)
+  - [Contributing](#contributing)
+    - [Coding Style](#coding-style)
 
 ## Overview
 
@@ -91,12 +97,16 @@ This includes the basic configuration for the plugin such as poll rate and the c
 - connection to thin-edge.io (MQTT broker needs to match the one of tedge)
 - log level (e.g. INFO, WARN, ERROR)
 - measurement combination (opt-in feature to reduce the amount of created measurements in the cloud)
+- subscribe_topics (MQTT topics for receiving write commands)
 
 ### devices.toml
 
 This file includes the information for the connection(s) to the Modbus server(s) and how the Modbus Registers and Coils map to thin-edge’s Measurements, Events and Alarms. It's also possible to overwrite the measurement combination on a device level and on every single measurement mapping.
 
 The device config can be managed via Cumulocity IoT or created with the Cloud Fieldbus operations.
+
+Key configuration fields:
+- `name` - Required for name-based write operations. Used to match metrics in write commands.
 
 ### Updating the config files
 
@@ -172,11 +182,47 @@ For adding a modbus RTU device you need to use unit-ID of the slave device in th
 
 ### Write operations
 
-The plugin supports writing to Modbus registers and coils through Cumulocity IoT operations.
+The plugin supports writing to Modbus registers and coils through thin-edge.io commands (modbus_SetRegister/modbus_SetCoil) or Cumulocity IoT operations (c8y_SetRegister/c8y_SetCoil).
 
-#### Write to Register (c8y_SetRegister)
+#### thin-edge.io Commands
 
-Write values to Modbus registers requires the following json to be included in the operation:
+The plugin subscribes to MQTT topics for receiving write commands:
+- `te/device/+///cmd/modbus_SetRegister/+` - for writing to registers
+- `te/device/+///cmd/modbus_SetCoil/+` - for writing to coils
+
+These commands are processed directly by the modbus reader service. The Cumulocity operations (c8y_SetRegister/c8y_SetCoil) are converted to thin-edge.io commands via operation templates.
+
+#### Payload Formats
+
+The plugin supports two payload formats for write operations:
+
+1. **Explicit address format** - directly specify register/coil address and parameters
+2. **Name-based format** - use metrics array with name field to match configuration in devices.toml
+
+For the name-based format, the `name` field in devices.toml registers/coils configuration is required to match the metrics. The matching uses prefix matching: if the metric name starts with the configured name, it will match. For example, a metric name `"foo_bar_setPoint"` will match a register with `name = "foo_bar"` in devices.toml.
+
+**Command Status Flow:**
+- Commands with `"status": "init"` are automatically converted to `"executing"` by the plugin
+- The plugin processes the command and updates status to `"successful"` or `"failed"`
+- The topic format must be: `te/device/<device-name>///cmd/modbus_SetRegister/<mapper-id>` where `<device-name>` must match a device name in devices.toml
+
+Example name-based payload input for modbus plugin:
+```json
+{
+  "status": "init",
+  "metrics": [{
+    "name": "Test_Int16_xxxxxxxx",
+    "timestamp": "2025-09-23T01:00:00Z",
+    "value": 123
+  }]
+}
+```
+
+#### Write to Register (c8y_SetRegister / modbus_SetRegister)
+
+Write values to Modbus registers. The plugin supports both integer and float register writes.
+
+**Explicit Address Format:**
 
 ```json
 {
@@ -192,6 +238,26 @@ Write values to Modbus registers requires the following json to be included in t
 }
 ```
 
+
+**Integer Register Writes:**
+- For integer registers, the plugin performs a read-modify-write operation
+- It first reads the current register value, applies bit masking based on `startBit` and `noBits`, then writes the updated value
+- This ensures that only the specified bits are modified while preserving other bits in the register
+
+**Float Register Writes (Name-based format only):**
+- Float values are supported for registers configured with `datatype = "float"` in devices.toml
+- Supported float sizes: 16-bit (half precision), 32-bit (single precision), 64-bit (double precision)
+- The plugin automatically handles endianness conversion based on the device's `littlewordendian` setting
+- Float writes require the name-based format and proper configuration in devices.toml
+
+**Protocol Support:**
+- TCP/IP Modbus: Specify `ipAddress` and ensure the device is reachable
+- RTU Modbus: Device must be configured in devices.toml with serial port settings
+
+**Error Handling:**
+- If the Modbus device is offline or unreachable, the command will immediately fail with status `"failed"`
+- No automatic retry mechanism is implemented; failed commands must be resent
+
 To create an operation to write a value to a Modbus register using Cumulocity, you can use the [go-c8y-cli](https://goc8ycli.netlify.app/docs/cli/c8y/operations/c8y_operations_create/) tool:
 
 ```
@@ -205,10 +271,11 @@ In the Cumulocity UI, the widget '[Asset table](https://cumulocity.com/docs/cock
 ![Image](./doc/write-register-asset-table.png)
 
 
-#### Write to Coil (c8y_SetCoil)
+#### Write to Coil (c8y_SetCoil / modbus_SetCoil)
 
-Write values to Modbus coils requires the following json to be included in the operation:
-:
+Write values to Modbus coils. Coils are single-bit outputs that can be set to 0 or 1.
+
+**Explicit Address Format:**
 
 ```json
 {
@@ -221,6 +288,19 @@ Write values to Modbus coils requires the following json to be included in the o
   }
 }
 ```
+
+**Name-based Format:**
+- Coils can be written using the name-based format with metrics array
+- The coil `name` in devices.toml must match the metric name (using prefix matching)
+- The metric value must be 0 or 1
+
+**Protocol Support:**
+- TCP/IP Modbus: Specify `ipAddress` and ensure the device is reachable
+- RTU Modbus: Device must be configured in devices.toml with serial port settings
+
+**Error Handling:**
+- If the Modbus device is offline or unreachable, the command will immediately fail with status `"failed"`
+- No automatic retry mechanism is implemented; failed commands must be resent
 
 To create an operation to write a value to a Modbus coil using Cumulocity, you can use the [go-c8y-cli](https://goc8ycli.netlify.app/docs/cli/c8y/operations/c8y_operations_create/) tool:
 
