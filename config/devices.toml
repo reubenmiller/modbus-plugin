@@ -18,6 +18,7 @@ signed=true
 multiplier=1
 divisor=1
 decimalshiftright=0
+offset=-20 # will be added to the value after the multiplier/divisor and decimalshiftright have been applied, negative offset gets subtracted
 input=false # true = Input Register false = Holding Register
 name="Test_Int16"
 #see https://thin-edge.github.io/thin-edge.io/html/architecture/thin-edge-json.html
@@ -33,6 +34,7 @@ signed=false
 multiplier=1
 divisor=1
 decimalshiftright=0
+#offset=0
 input=false
 datatype="float"
 name="Test_Float32"
