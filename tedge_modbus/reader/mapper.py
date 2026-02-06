@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Modbus mapper"""
+
 import json
 import struct
 import sys
