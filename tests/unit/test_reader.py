@@ -6,6 +6,7 @@ sys.path.insert(0, parent_dir)
 import unittest
 from unittest.mock import patch, MagicMock
 from tedge_modbus.reader.reader import ModbusPoll
+from tedge_modbus.reader.mapper import ModbusMapper
 
 
 class TestReaderPollingInterval(unittest.TestCase):
@@ -81,12 +82,188 @@ class TestReaderPollingInterval(unittest.TestCase):
         call_args, _ = self.poll.poll_scheduler.enter.call_args
         self.assertEqual(call_args[0], 5)
 
-    # Todo: Implement the following tests
     def test_defaults_to_no_measurement_combination(self):
-        pass
+        """
+        GIVEN no global measurement combination
+        AND a device with no defined measurement combination with two or more registers with defined measurements
+        WHEN poll_device is called
+        # THEN there should be more than one send_tedge_message call containing measurements.
+        """
+        # GIVEN no global measurement combination
+        self.poll.base_config = {"modbus": {"pollinterval": 5}}  # This should be used
+        # AND a device with no defined measurement combination with two or more registers with defined measurements
+        device_config = {
+            "name": "test_device",
+            "registers": [
+                {
+                    "number": 0,
+                    "startbit": 0,
+                    "nobits": 16,
+                    "signed": False,
+                    "on_change": False,
+                    "measurementmapping": {
+                        "templatestring": '{"sensor1":{"temp":%% }}'
+                    },
+                },
+                {
+                    "number": 1,
+                    "startbit": 0,
+                    "nobits": 16,
+                    "signed": False,
+                    "on_change": False,
+                    "measurementmapping": {
+                        "templatestring": '{"sensor2":{"temp":%% }}'
+                    },
+                },
+            ],
+        }
+
+        mapper = ModbusMapper(device_config)
+
+        mock_poll_model = MagicMock()
+        self.poll.send_tedge_message = MagicMock()
+
+        # WHEN poll_device is called
+        with patch.object(
+            self.poll,
+            "get_data_from_device",
+            return_value=(None, None, [15, 22], None, None),
+        ):
+            self.poll.poll_device(device_config, mock_poll_model, mapper)
+
+        # THEN there should be more than one send_tedge_message call containing measurements.
+        self.assertGreater(
+            len(
+                [
+                    ele
+                    for ele in self.poll.send_tedge_message.call_args_list
+                    if ele[0][0].topic == "te/device/test_device///m/"
+                ]
+            ),
+            1,
+        )
 
     def test_global_measurement_combination(self):
-        pass
+        """
+        GIVEN global measurement combination
+        AND a device with no defined measurement combination with two or more registers with defined measurements
+        WHEN poll_device is called
+        THEN there should be only one send_tedge_message call containing measurements.
+        """
+        # GIVEN global measurement combination
+        self.poll.base_config = {
+            "modbus": {"pollinterval": 5, "combinemeasurements": True}
+        }  # This should be used
+        # AND a device with no defined measurement combination with two or more registers with defined measurements
+        device_config = {
+            "name": "test_device",
+            "registers": [
+                {
+                    "number": 0,
+                    "startbit": 0,
+                    "nobits": 16,
+                    "signed": False,
+                    "on_change": False,
+                    "measurementmapping": {
+                        "templatestring": '{"sensor1":{"temp":%% }}'
+                    },
+                },
+                {
+                    "number": 1,
+                    "startbit": 0,
+                    "nobits": 16,
+                    "signed": False,
+                    "on_change": False,
+                    "measurementmapping": {
+                        "templatestring": '{"sensor2":{"temp":%% }}'
+                    },
+                },
+            ],
+        }
+
+        mapper = ModbusMapper(device_config)
+
+        mock_poll_model = MagicMock()
+        self.poll.send_tedge_message = MagicMock()
+
+        # WHEN poll_device is called
+        with patch.object(
+            self.poll,
+            "get_data_from_device",
+            return_value=(None, None, [15, 22], None, None),
+        ):
+            self.poll.poll_device(device_config, mock_poll_model, mapper)
+
+        # THEN there should be only one send_tedge_message call containing measurements.
+        self.assertEqual(
+            len(
+                [
+                    ele
+                    for ele in self.poll.send_tedge_message.call_args_list
+                    if ele[0][0].topic == "te/device/test_device///m/"
+                ]
+            ),
+            1,
+        )
 
     def test_device_specific_measurement_combination(self):
-        pass
+        """
+        GIVEN no global measurement combination
+        AND a device with defined measurement combination with two or more registers with defined measurements
+        WHEN poll_device is called
+        THEN there should be only one send_tedge_message call containing measurements.
+        """
+        # GIVEN no global measurement combination
+        self.poll.base_config = {"modbus": {"pollinterval": 5}}  # This should be used
+        # AND a device with defined measurement combination with two or more registers with defined measurements
+        device_config = {
+            "name": "test_device",
+            "combinemeasurements": True,
+            "registers": [
+                {
+                    "number": 0,
+                    "startbit": 0,
+                    "nobits": 16,
+                    "signed": False,
+                    "on_change": False,
+                    "measurementmapping": {
+                        "templatestring": '{"sensor1":{"temp":%% }}'
+                    },
+                },
+                {
+                    "number": 1,
+                    "startbit": 0,
+                    "nobits": 16,
+                    "signed": False,
+                    "on_change": False,
+                    "measurementmapping": {
+                        "templatestring": '{"sensor2":{"temp":%% }}'
+                    },
+                },
+            ],
+        }
+
+        mapper = ModbusMapper(device_config)
+
+        mock_poll_model = MagicMock()
+        self.poll.send_tedge_message = MagicMock()
+
+        # WHEN poll_device is called
+        with patch.object(
+            self.poll,
+            "get_data_from_device",
+            return_value=(None, None, [15, 22], None, None),
+        ):
+            self.poll.poll_device(device_config, mock_poll_model, mapper)
+
+        # THEN there should be only one send_tedge_message call containing measurements
+        self.assertEqual(
+            len(
+                [
+                    ele
+                    for ele in self.poll.send_tedge_message.call_args_list
+                    if ele[0][0].topic == "te/device/test_device///m/"
+                ]
+            ),
+            1,
+        )
