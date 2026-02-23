@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Modbus mapper"""
+
 import json
 import struct
 import sys
@@ -136,7 +137,7 @@ class ModbusMapper:
                 * (register_def.get("multiplier") or 1)
                 * (10 ** (register_def.get("decimalshiftright") or 0))
                 / (register_def.get("divisor") or 1)
-            )
+            ) + (register_def.get("offset") or 0)
 
             on_change = register_def.get("on_change", False)
 

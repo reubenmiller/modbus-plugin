@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Cumulocity Modbus device operation handler"""
+
 import logging
 from dataclasses import dataclass
 import json

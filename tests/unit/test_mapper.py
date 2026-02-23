@@ -340,3 +340,86 @@ class TestMapperOnChange(unittest.TestCase):
         self.assertEqual(len(messages2), 1)
         event_data2 = json.loads(messages2[0].data)
         self.assertEqual(event_data2["text"], "This event tests the event mapping")
+
+    def test_value_scaling_combined(self):
+        register_def = {
+            "number": 100,
+            "startbit": 0,
+            "nobits": 16,
+            "multiplier": 3,
+            "divisor": 4,
+            "decimalshiftright": 1,
+            "offset": -20,
+            "signed": False,
+            "measurementmapping": {"templatestring": '{"temp": %%}'},
+        }
+
+        messages, _ = self.mapper.map_register(
+            read_register=[20], register_def=register_def
+        )
+        data = json.loads(messages[0].data)
+        self.assertAlmostEqual(data["temp"], 130.0)
+
+    def test_value_scaling_multiplier(self):
+        register_def = {
+            "number": 100,
+            "startbit": 0,
+            "nobits": 16,
+            "multiplier": 3,
+            "signed": False,
+            "measurementmapping": {"templatestring": '{"temp": %%}'},
+        }
+
+        messages, _ = self.mapper.map_register(
+            read_register=[20], register_def=register_def
+        )
+        data = json.loads(messages[0].data)
+        self.assertAlmostEqual(data["temp"], 60.0)
+
+    def test_value_scaling_divisor(self):
+        register_def = {
+            "number": 100,
+            "startbit": 0,
+            "nobits": 16,
+            "divisor": 4,
+            "signed": False,
+            "measurementmapping": {"templatestring": '{"temp": %%}'},
+        }
+
+        messages, _ = self.mapper.map_register(
+            read_register=[20], register_def=register_def
+        )
+        data = json.loads(messages[0].data)
+        self.assertAlmostEqual(data["temp"], 5.0)
+
+    def test_value_scaling_decimalshiftright(self):
+        register_def = {
+            "number": 100,
+            "startbit": 0,
+            "nobits": 16,
+            "decimalshiftright": 2,
+            "signed": False,
+            "measurementmapping": {"templatestring": '{"temp": %%}'},
+        }
+
+        messages, _ = self.mapper.map_register(
+            read_register=[20], register_def=register_def
+        )
+        data = json.loads(messages[0].data)
+        self.assertAlmostEqual(data["temp"], 2000.0)
+
+    def test_value_scaling_offset(self):
+        register_def = {
+            "number": 100,
+            "startbit": 0,
+            "nobits": 16,
+            "offset": 10,
+            "signed": False,
+            "measurementmapping": {"templatestring": '{"temp": %%}'},
+        }
+
+        messages, _ = self.mapper.map_register(
+            read_register=[50], register_def=register_def
+        )
+        data = json.loads(messages[0].data)
+        self.assertAlmostEqual(data["temp"], 60.0)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Modbus reader"""
+
 import argparse
 import json
 import logging
@@ -19,7 +20,6 @@ from watchdog.observers import Observer
 from .banner import BANNER
 from .mapper import MappedMessage, ModbusMapper
 from ..operations import set_coil, set_register
-
 
 DEFAULT_FILE_DIR = "/etc/tedge/plugins/modbus"
 BASE_CONFIG_NAME = "modbus.toml"

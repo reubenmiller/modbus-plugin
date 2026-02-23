@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Cumulocity SerialConfiguration operation handler"""
+
 import json
 import logging
 import toml
