@@ -22,5 +22,5 @@ fi
 
 if [ "$1" = "remove" ]; then
     tedge config remove c8y.smartrest.templates modbus
-	tedge refresh-bridges
+	tedge refresh-bridges ||:
 fi

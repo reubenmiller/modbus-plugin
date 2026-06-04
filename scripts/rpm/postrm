@@ -15,5 +15,5 @@ fi
 
 if [ "$1" = "0" ]; then
     tedge config remove c8y.smartrest.templates modbus
-    tedge refresh-bridges
+    tedge refresh-bridges ||:
 fi
