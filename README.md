@@ -9,7 +9,6 @@ Plugin for polling Modbus devices and publishing the data to thin-edge.io. If us
   - [Table of contents](#table-of-contents)
   - [Overview](#overview)
   - [Requirements](#requirements)
-  - [Demo](#demo)
   - [Config files](#config-files)
     - [modbus.toml](#modbustoml)
     - [devices.toml](#devicestoml)
@@ -44,39 +43,7 @@ The plugin regularly polls Modbus devices and publishes the data to the thin-edg
 - Python >= 3.8
 - systemd
 - for operations support: thin-edge.io >= 1.x
-- for demo purposes: docker-compose
-
-## Demo
-
-You can run the thin-edge.io with the plugin and a Modbus simulator locally via Docker containers. To start the demo, run 'just up' in the root folder of the repository. This will start the tedge container and the Modbus simulator.
-The Modbus simulator runs a Modbus server with some example registers. The simulator is based on the [pymodbus](https://pymodbus.readthedocs.io/en/latest/) library and can be found and changed in the [images/simulator](./images/simulator/) folder.
-
-The demo includes a example device that maps an integer and float register to a child device. The device configuration can be found in the [images/tedge/config](./images/tedge/config) folder.
-
-To start the containers, you need to have docker-compose installed. You can start the containers with:
-
-```sh
-just up
-```
-
-After starting the containers, you need to register the thin-edge.io on your tenant. You can do this by running the following command:
-
-```sh
-just bootstrap
-```
-
-This will create a device certificate in the tedge container and upload it to your tenant. To skip the manual input of your credentials, you create a .env file in your working directory:
-
-```sh
-C8Y_BASEURL=https://<tenant>.cumulocity.com
-C8Y_USER=<user>
-C8Y_PASSWORD=<password>
-DEVICE_ID=<External ID of your Test Device>
-```
-
-You can skip the manual bootstrap process by running:
-
-    just bootstrap --no-prompt
+- for running the tests: docker and [just](https://github.com/casey/just)
 
 ## Config files
 
@@ -320,21 +287,36 @@ In the Cumulocity UI, the widget [Asset table](https://cumulocity.com/docs/cockp
 
 ## Testing
 
-To run the tests locally, you need to provide your Cumulocity credentials as environment variables in a .env file:
+The system tests use [Robot Framework](https://robotframework.org/) together with
+the [robotframework-devicelibrary](https://github.com/reubenmiller/robotframework-devicelibrary).
+Each test suite spins up a fresh, isolated thin-edge.io + Modbus simulator stack
+(defined in [docker-compose.yaml](./docker-compose.yaml)), bootstraps it to
+Cumulocity, runs the tests and cleans the device up again afterwards — so there is
+no need to start a long-lived demo by hand.
+
+To run the tests locally, you need docker and [just](https://github.com/casey/just),
+and you need to provide your Cumulocity credentials as environment variables in a
+`.env` file in the repository root:
 
 ```sh
 C8Y_BASEURL=https://<tenant>.cumulocity.com
 C8Y_USER=<user>
 C8Y_PASSWORD=<password>
-DEVICE_ID=<External ID of your Test Device>
 ```
 
-If you have the simulator and the tedge container running, you can run the tests with:
+Then build the package (the tests install it into the test container) and run the
+tests:
 
 ```sh
+just build
 just venv
-just setup
 just test
+```
+
+You can run a single suite or test by passing additional options through to robot, e.g.:
+
+```sh
+just test tests/modbus_reader
 ```
 
 ## Build
