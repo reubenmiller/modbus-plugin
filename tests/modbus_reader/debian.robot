@@ -1,14 +1,19 @@
 *** Settings ***
 Resource        ../resources/common.robot
-Library         Cumulocity
 Library         OperatingSystem
 
-Suite Setup     Set Main Device
+Suite Setup       Setup Device
+Suite Teardown    Teardown Device
+
+
+*** Variables ***
+${DIST_DIR}     ${CURDIR}/../../dist
 
 
 *** Test Cases ***
 Device should have installed software tedge-modbus-plugin
-    ${deb_version}=    Get Debian Package Version    ${CURDIR}/../data/tedge-modbus-plugin.deb
+    ${package}=    Get Modbus Package
+    ${deb_version}=    Get Debian Package Version    ${package}
     ${installed}=    Device Should Have Installed Software    tedge-modbus-plugin
     Should Be Equal    ${installed["tedge-modbus-plugin"]["version"]}    ${deb_version}
 
@@ -16,7 +21,8 @@ Service should be active
     System D Service should be Active    tedge-modbus-plugin
 
 ReInstall Modbus Plugin
-    ${deb_version}=    Get Debian Package Version    ${CURDIR}/../data/tedge-modbus-plugin.deb
+    ${package}=    Get Modbus Package
+    ${deb_version}=    Get Debian Package Version    ${package}
     # Uninstall tedge-modbus-plugin
     ${uninstall_operation}=    Cumulocity.Uninstall Software
     ...    {"name": "tedge-modbus-plugin", "version": "${deb_version}", "softwareType": "apt"}
@@ -31,7 +37,7 @@ ReInstall Modbus Plugin
     ${binary_url}=    Cumulocity.Create Inventory Binary
     ...    tedge-modbus-plugin
     ...    apt
-    ...    file=${CURDIR}/../data/tedge-modbus-plugin.deb
+    ...    file=${package}
     # Install modbus Plugin
     ${install_operation}=    Cumulocity.Install Software
     ...    {"name": "tedge-modbus-plugin", "version": "${deb_version}", "softwareType": "apt", "url": "${binary_url}"}
@@ -47,6 +53,13 @@ ReInstall Modbus Plugin
 
 
 *** Keywords ***
+Get Modbus Package
+    [Documentation]    Resolve the built .deb package from the dist directory
+    ...    (produced by 'just build' / downloaded as the dist-packages artifact).
+    ${files}=    OperatingSystem.List Files In Directory    ${DIST_DIR}    *.deb    absolute=${True}
+    Should Not Be Empty    ${files}    msg=No .deb package found in ${DIST_DIR}. Run 'just build' first.
+    RETURN    ${files}[0]
+
 Get Debian Package Version
     [Arguments]    ${deb_file_path}
     ${version}=    Run    dpkg-deb -f ${deb_file_path} Version
