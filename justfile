@@ -6,6 +6,11 @@ export VERSION := env_var_or_default("VERSION", "1.0.0")
 # Install python virtual environment
 venv:
   [ -d .venv ] || python3 -m venv .venv
+  ./.venv/bin/pip3 install -r tests/requirements.txt -r requirements.dev.txt
+
+# Install python virtual environment for development
+venv-dev:
+  [ -d .venv ] || python3 -m venv .venv
   ./.venv/bin/pip3 install -r tests/requirements.txt -r requirements.txt -r requirements.dev.txt
 
 # Format python code
