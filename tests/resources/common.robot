@@ -23,6 +23,7 @@ Setup Device
     Set Suite Variable    $DEVICE_ID
     Bootstrap Device    ${DEVICE_ID}
     Set Main Device
+    Wait For Modbus Plugin Startup
 
 Setup Child Device
     [Documentation]    Create the stack and set the device context to the
@@ -41,6 +42,15 @@ Bootstrap Device
     ${operation}=    Cumulocity.Get Configuration    typename=tedge-configuration-plugin    timeout=60
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
     Sleep    2s
+
+Wait For Modbus Plugin Startup
+    [Documentation]    tedge-modbus-plugin publishes the current configuration
+    ...    as twin data only once it has connected to the MQTT broker (with
+    ...    retries and a fixed delay), and its config file watcher is started
+    ...    after that initial publish. Wait for the twin data to reach the
+    ...    cloud so that operations modifying the config file are not missed
+    ...    by the watcher and not overwritten by the stale startup publish.
+    Cumulocity.Managed Object Should Have Fragments    c8y_ModbusConfiguration    timeout=60
 
 Set Main Device
     Cumulocity.External Identity Should Exist    ${DEVICE_ID}
