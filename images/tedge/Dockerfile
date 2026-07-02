@@ -1,25 +1,14 @@
-#Build dpkg package
-FROM goreleaser/nfpm as build-stage
+ARG TEST_IMAGE=ghcr.io/thin-edge/tedge-demo-main-systemd:latest
+FROM ${TEST_IMAGE}
 
-# Copy required files
-WORKDIR /build
-COPY tedge_modbus /build/tedge_modbus
-COPY operations /build/operations
-COPY scripts /build/scripts
-COPY nfpm.yaml /build/nfpm.yaml
-COPY config /build/config
-COPY tedge-modbus-plugin.service /build/tedge-modbus-plugin.service
-# Build Package
-RUN nfpm pkg --packager deb --target /tmp/modbus-plugin_all.deb
-
-FROM ghcr.io/thin-edge/tedge-demo-main-systemd:latest
-# Install Modbus Plugin
-COPY --from=build-stage /tmp/modbus-plugin_all.deb /tmp/modbus-plugin_all.deb
+# Install the Modbus Plugin from the prebuilt package (produced by `just build`
+# and provided in the dist/ directory / the dist-packages CI artifact).
+COPY dist/*.deb /tmp/
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    /tmp/modbus-plugin_all.deb \
-    && rm /tmp/modbus-plugin_all.deb
+    && apt-get install -y --no-install-recommends /tmp/*.deb \
+    && rm -f /tmp/*.deb \
+    && rm -rf /var/lib/apt/lists/*
 
-# Add confguration plugin config
+# Add configuration plugin config
 COPY images/tedge/config/tedge-configuration-plugin.toml /etc/tedge/plugins/tedge-configuration-plugin.toml
 COPY images/tedge/config/tedge-log-plugin.toml /etc/tedge/plugins/tedge-log-plugin.toml

@@ -1,9 +1,9 @@
 *** Settings ***
 Resource        ../resources/common.robot
-Library         Cumulocity
-Library    DateTime
+Library         DateTime
 
-Suite Setup     Set Child Device1
+Suite Setup       Setup Child Device
+Suite Teardown    Teardown Device
 
 
 *** Test Cases ***

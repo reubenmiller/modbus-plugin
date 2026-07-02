@@ -1,8 +1,8 @@
 *** Settings ***
 Resource        ../resources/common.robot
-Library         Cumulocity
 
-Suite Setup     Set Child Device1
+Suite Setup       Setup Child Device
+Suite Teardown    Teardown Device
 
 
 *** Test Cases ***

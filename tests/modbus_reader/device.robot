@@ -1,14 +1,15 @@
 *** Settings ***
 Resource        ../resources/common.robot
-Library         Cumulocity
 
-Suite Setup     Set Main Device
+Suite Setup       Setup Device
+Suite Teardown    Teardown Device
 
 
 *** Test Cases ***
 Device should have the fragment c8y_ModbusConfiguration
     Cumulocity.Managed Object Should Have Fragments    c8y_ModbusConfiguration
-    Cumulocity.Managed Object Should Have Fragment Values    c8y_ModbusConfiguration.pollingRate\=3
+    # pollingRate reflects the default pollinterval shipped in config/modbus.toml
+    Cumulocity.Managed Object Should Have Fragment Values    c8y_ModbusConfiguration.pollingRate\=2
 
 ChildDevice TestCase1 should be created
     Cumulocity.Should Be A Child Device Of Device    ${DEVICE_ID}:device:TestCase1
